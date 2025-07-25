@@ -1,0 +1,7 @@
+{
+    "parameters": {
+        "zendesk_subdomain": "http://localhost:4567",
+        "azure_client_id": "58a19c87-351f-4332-931e-539f7801d697",
+        "azure_tenant_id": "7cb38633-08ea-4cf4-923f-5c900a90e7c7"
+    }
+}

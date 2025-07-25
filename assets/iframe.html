@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Intune Explorer</title>
+  <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-js/1.2.0/css/fabric.min.css">
+  <link rel="stylesheet" href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-js/1.2.0/css/fabric.components.min.css">
+  <link rel="stylesheet" href="./stylesheet.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+  <script src="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-js/1.2.0/js/fabric.min.js"></script>
+
+  <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+  <script>
+    let c = ZAFClient.init();
+    c.invoke('resize', { width: '100%', height: '400px' });
+  </script>
+
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+
+  <script src="./MSAL.js"></script>
+</head>
+<body class="ms-Fabric ms-bgColor-themeLighter main-body">
+
+  <button class="hidden" id="logout-btn">
+    <span class="ms-fontWeight-semibold ms-font-l">Logout</span>
+  </button>
+
+
+  <h2 class="ms-font-su ms-fontColor-themeDark ms-fontWeight-bold ms-borderColor-themeLighter ms-u-borderBase" id="title">Intune Explorer</h2>
+
+
+  <div class="ms-Card" id="msal">
+
+    <h3 class="ms-font-xxl ms-fontColor-themePrimary ms-fontWeight-semibold">Authentication Status</h3>
+
+    <h4 id="status" class="ms-font-m ms-fontColor-themeLighter">Checking authentication status...</h4>
+
+    <button class="ms-Button ms-Button--primary" id="sign-in-btn">
+      <i class="ms-Button-icon ms-Icon ms-Icon--Contact ms-Icon--s" aria-hidden="true"></i>
+      <span class="ms-Button-label">Sign In</span>
+    </button>
+
+  </div>
+
+  <button class="ms-Button ms-Button--primary hidden" id="fetch-requester-devices"><span class="ms-fontWeight-semibold ms-fontColor-themeLighter">Fetch User's Device(s)</span></button>
+
+  <h2 class="ms-u-borderBase ms-bgColor-error ms-borderColor-error ms-fontColor-error" id="error"> </h2>
+</body>
+</html>

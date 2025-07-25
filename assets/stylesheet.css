@@ -1,0 +1,119 @@
+#logout-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 1000;
+    
+    /* Enhanced styling */
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    
+    /* Modern shadow */
+    box-shadow: 
+        0 4px 15px rgba(238, 90, 82, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    /* Smooth transitions */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Prevent text selection */
+    user-select: none;
+    -webkit-user-select: none;
+    
+    /* Subtle border for depth */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 8px 25px rgba(238, 90, 82, 0.4),
+        0 4px 10px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #ff5252, #e53935);
+}
+
+#logout-btn:active {
+    transform: translateY(0);
+    box-shadow: 
+        0 2px 10px rgba(238, 90, 82, 0.3),
+        0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#logout-btn:focus {
+    outline: none;
+    box-shadow: 
+        0 4px 15px rgba(238, 90, 82, 0.3),
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 0 0 3px rgba(255, 107, 107, 0.3);
+}
+
+/* Icon addition */
+#logout-btn::before {
+    margin-right: 6px;
+    transition: transform 0.3s ease;
+}
+
+#logout-btn:hover::before {
+    transform: translateX(2px);
+}
+
+/* New styles moved from inline */
+.hidden {
+    display: none !important;
+}
+
+.main-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+}
+
+#title {
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: -10px;
+}
+
+#msal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 500px;
+    margin: 24px auto;
+    background: #252525;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    padding: 30px;
+}
+
+#msal h3 {
+    margin-bottom: -10px;
+}
+
+#error {
+    padding: 5px;
+    border-radius: 4px;
+}
+
+#logout-btn {
+    filter: brightness(100%);
+    transition: filter 0.2s;
+    scale: 0.9;
+}
+
+#logout-btn:hover {
+    filter: brightness(90%);
+}
+
+#fetch-requester-devices {
+    margin-top: 20px;
+}
