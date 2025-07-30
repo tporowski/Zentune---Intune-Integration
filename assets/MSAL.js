@@ -144,15 +144,12 @@ async function selectAccount() {
             updateUI("signed-in", selectedAccount);
             showStatus(`Switched to account: ${selectedAccount.name || selectedAccount.username}`);
         } else {
-            // User cancelled or no selection made, keep current state
-            console.log("No account selected, keeping current state");
         }
     } else if (currentAccounts.length === 1) {
         let account = currentAccounts[0];
         username = account.username;
         updateUI("signed-in", currentAccounts[0]);
     }
-    console.log("account selection completed")
 }
 
 
@@ -191,7 +188,6 @@ function signOut() {
     // Use popup logout instead of redirect logout for iframe compatibility
     myMSALObj.logoutPopup(logoutRequest)
         .then(() => {
-            console.log("Logout successful");
             username = "";
             
             // Reset fetch button state for next user
@@ -297,8 +293,6 @@ function disableFetchButton() {
             const originalText = fetchBtn.textContent;
             fetchBtn.textContent = `🔒 ${originalText}`;
         }
-
-        console.log("Fetch button disabled due to insufficient permissions");
     }
 }
 
@@ -313,8 +307,6 @@ function resetFetchButton() {
         if (fetchBtn.textContent.includes('🔒')) {
             fetchBtn.textContent = fetchBtn.textContent.replace('🔒 ', '');
         }
-        
-        console.log("Fetch button reset for next user");
     }
 }
 
@@ -421,9 +413,6 @@ async function fetchRequesterDevices() {
             accessToken = null;
             document.getElementById("fetch-requester-devices").classList.add("hidden");
         }
-        // Display the results
-        console.log(`Requester devices: ${(devicesData.value).length}`);
-
         if (devicesData.value.length === 0) {
             // Show a warning when no devices are found
             Swal.fire({
