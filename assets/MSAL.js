@@ -25,13 +25,13 @@ async function initializeApp() {
         // First, get the metadata
         const metadata = await client.metadata();
         appMetadata = metadata.settings;
-        
+
         // Now that we have metadata, we can initialize MSAL
         await initializeMSAL();
-        
+
         // Set up event listeners after MSAL is initialized
         setupEventListeners();
-        
+
     } catch (error) {
         console.error("App initialization error:", error);
         showError("Failed to initialize application: " + error.message);
@@ -69,7 +69,7 @@ async function initializeMSAL() {
 
     // Initialize MSAL and handle authentication
     await myMSALObj.initialize();
-    
+
     try {
         // Handle redirect promise
         const response = await myMSALObj.handleRedirectPromise();
@@ -87,12 +87,12 @@ async function initializeMSAL() {
 }
 
 function getRedirectUri() {
-  const { origin, pathname } = window.location;
-  const segments = pathname.split('/');
-  segments.pop();
+    const { origin, pathname } = window.location;
+    const segments = pathname.split('/');
+    segments.pop();
 
-  segments.push('authRedirect.html');
-  return origin + segments.join('/');
+    segments.push('authRedirect.html');
+    return origin + segments.join('/');
 }
 
 function setupEventListeners() {
@@ -100,15 +100,15 @@ function setupEventListeners() {
     const logoutBtn = document.getElementById('logout-btn');
     const fetchDevicesBtn = document.getElementById('fetch-requester-devices');
     const swapAccounts = document.getElementById('swap-accounts');
-    
+
     if (signInBtn) {
         signInBtn.addEventListener('click', signInPopup);
     }
-    
+
     if (logoutBtn) {
         logoutBtn.addEventListener('click', signOut);
     }
-    
+
     if (fetchDevicesBtn) {
         fetchDevicesBtn.addEventListener('click', fetchRequesterDevices);
     }
@@ -138,13 +138,13 @@ async function selectAccount() {
     }
 
     const currentAccounts = myMSALObj.getAllAccounts();
-    
+
     if (currentAccounts.length === 0) {
         updateUI("signed-out");
         return;
     } else if (currentAccounts.length > 1) {
         const selectedAccount = await showAccountSelectionPopup(currentAccounts);
-        
+
         if (selectedAccount) {
             username = selectedAccount.username;
             updateUI("signed-in", selectedAccount);
@@ -166,9 +166,9 @@ async function displayAccounts() {
         console.error("MSAL not initialized");
         return;
     }
-    
+
     const currentAccounts = myMSALObj.getAllAccounts();
-    
+
     if (currentAccounts.length === 0) {
         Swal.fire({
             title: 'No Accounts',
@@ -178,9 +178,9 @@ async function displayAccounts() {
         });
         return;
     }
-    
+
     const selectedAccount = await showAccountSelectionPopup(currentAccounts);
-    
+
     if (selectedAccount) {
         username = selectedAccount.username;
         updateUI("signed-in", selectedAccount);
@@ -218,26 +218,38 @@ function signOut() {
     };
 
     showStatus("Signing out...");
-    
+
     // Use popup logout instead of redirect logout for iframe compatibility
     myMSALObj.logoutPopup(logoutRequest)
         .then(() => {
             console.log("Logout successful");
             username = "";
+            
+            // Reset fetch button state for next user
+            resetFetchButton();
+            
             updateUI("signed-out");
             showStatus("Signed out successfully");
+
+            // Check for remaining accounts after successful logout
+            const currentAccounts = myMSALObj.getAllAccounts();
+            if (currentAccounts.length > 0) {
+                selectAccount();
+            }
         })
         .catch((error) => {
             console.error("Logout error:", error);
-            showError(error);
+            // If user canceled logout or popup was closed, don't change UI state
+            if (error.message && error.message.includes('user_cancelled')) {
+                showStatus("Logout cancelled by user");
+            } else {
+                showError(error);
+            }
         });
-
-    const currentAccounts = myMSALObj.getAllAccounts();
-    if (currentAccounts.length > 0) {selectAccount()};
 }
 
 // Ensure proper UI updates based on authentication state
-function updateUI(state, account = null) {
+async function updateUI(state, account = null) {
     const title = document.getElementById("title");
     const statusElement = document.getElementById("status");
     const errorElement = document.getElementById("error");
@@ -247,18 +259,44 @@ function updateUI(state, account = null) {
 
     if (state === "signed-in" && account) {
         // Welcome user by first name
-        let agent = account.name ? account.name.split(' ')[0] : account.username;
-        title.textContent = `Welcome, ${agent}!`;
-        errorElement.classList.add("hidden");
-        msalElement.classList.add("hidden");
-        logout.classList.remove("hidden");
-        fetchBtn.classList.remove("hidden");
+        let agent;
+        if (account.name) {
+            // Remove commas from the name first, then split
+            let cleanName = account.name.replace(/,/g, "");
+            let split_name = cleanName.split(' ');
+            
+            // Check if we have name parts and if the username contains the first name
+            if (split_name.length > 0 && split_name[0]) {
+                if (!(account.username).includes(split_name[0].toLowerCase())) {
+                    agent = split_name[0];
+                } else if (split_name.length > 1 && split_name[1]) {
+                    agent = split_name[1];
+                } else {
+                    agent = split_name[0];
+                }
+            } else {
+                agent = account.username;
+            }
+        } else {
+            agent = account.username;
+        }
+        // let agent = account.name ? account.name.split(' ')[0] : account.username;
+        if (title) title.textContent = `Welcome, ${agent}!`;
+        if (errorElement) errorElement.classList.add("hidden");
+        if (msalElement) msalElement.classList.add("hidden");
+        if (logout) logout.classList.remove("hidden");
+        if (fetchBtn) fetchBtn.classList.remove("hidden");
     } else {
-        statusElement.textContent = "Not signed in. Please sign in to continue.";
-        errorElement.classList.add("hidden");
-        msalElement.classList.remove("hidden");
-        logout.classList.add("hidden");
-        fetchBtn.classList.add('hidden');
+        if (statusElement) statusElement.textContent = "Not signed in. Please sign in to continue.";
+        try {
+            if (errorElement) errorElement.classList.add("hidden");
+            if (msalElement) msalElement.classList.remove("hidden");
+            if (logout) logout.classList.add("hidden");
+            if (fetchBtn) fetchBtn.classList.add('hidden');
+        } catch (e) {
+            console.error("Error updating UI:", e);
+            showError("Failed to update UI: " + e.message);
+        }
     }
 }
 
@@ -275,6 +313,39 @@ function signedIn(account = null) {
     updateUI("signed-in", account);
 }
 
+// Function to disable the fetch button when user lacks permissions
+function disableFetchButton() {
+    const fetchBtn = document.getElementById("fetch-requester-devices");
+    if (fetchBtn) {
+        fetchBtn.disabled = true;
+        fetchBtn.title = "You don't have permission to access device information. Contact your administrator for DeviceManagementManagedDevices.Read.All permission.";
+
+        // Add visual indicator
+        if (!fetchBtn.textContent.includes('🔒')) {
+            const originalText = fetchBtn.textContent;
+            fetchBtn.textContent = `🔒 ${originalText}`;
+        }
+
+        console.log("Fetch button disabled due to insufficient permissions");
+    }
+}
+
+// Function to reset the fetch button state when user logs out
+function resetFetchButton() {
+    const fetchBtn = document.getElementById("fetch-requester-devices");
+    if (fetchBtn) {
+        fetchBtn.disabled = false;
+        fetchBtn.title = "Fetch devices for the ticket requester";
+        
+        // Remove lock icon if it exists
+        if (fetchBtn.textContent.includes('🔒')) {
+            fetchBtn.textContent = fetchBtn.textContent.replace('🔒 ', '');
+        }
+        
+        console.log("Fetch button reset for next user");
+    }
+}
+
 // Modified getAccessToken to return the token
 async function getAccessToken() {
     if (!myMSALObj) {
@@ -282,7 +353,7 @@ async function getAccessToken() {
     }
 
     const account = myMSALObj.getAccountByUsername(username);
-    
+
     if (!account) {
         throw new Error("No account found. Please sign in first.");
     }
@@ -298,7 +369,7 @@ async function getAccessToken() {
         return response.accessToken;
     } catch (error) {
         console.warn("Silent token acquisition failed, trying popup:", error);
-        
+
         // If silent acquisition fails, try popup
         try {
             const popupResponse = await myMSALObj.acquireTokenPopup(accessTokenRequest);
@@ -310,8 +381,29 @@ async function getAccessToken() {
     }
 }
 
+// Token expiry monitoring
+setInterval(async () => {
+    try {
+        await getAccessToken(); // This will refresh if needed
+    } catch (error) {
+        console.warn("Token refresh failed:", error);
+    }
+}, 30 * 60 * 1000); // Check every 30 minutes
+
 // New function to fetch requester devices
 async function fetchRequesterDevices() {
+    // Check if button is already disabled from previous permission failure
+    const fetchBtn = document.getElementById("fetch-requester-devices");
+    if (fetchBtn && fetchBtn.disabled) {
+        Swal.fire({
+            title: 'Access Denied',
+            text: 'You don\'t have the required permissions to fetch device information. Please contact your administrator.',
+            icon: 'error',
+            confirmButtonColor: '#0078d4'
+        });
+        return;
+    }
+
     let accessToken;
     let endpoint;
     let devicesData;
@@ -326,7 +418,7 @@ async function fetchRequesterDevices() {
             requesterEmail = ticketData.ticket.requester.email;
             requesterName = ticketData.ticket.requester.name;
             console.log(`Requester email: ${requesterEmail}`);
-            
+
             // Get access token
             let account = myMSALObj.getAccountByUsername(username);
 
@@ -335,20 +427,20 @@ async function fetchRequesterDevices() {
             }
 
             try {
-                const response = await myMSALObj.acquireTokenSilent({...tokenRequest, account: account});
+                const response = await myMSALObj.acquireTokenSilent({ ...tokenRequest, account: account });
                 console.log("Access token acquired silently");
                 accessToken = response.accessToken;
             } catch (error) {
-                console.warn("Silent token acquisition failed, trying popup:", error);  
+                console.warn("Silent token acquisition failed, trying popup:", error);
                 try {
-                        const popupResponse = await myMSALObj.acquireTokenPopup(accessTokenRequest);
-                        console.log("Access token acquired via popup");
-                        accessToken = popupResponse.accessToken;
-                    } catch (popupError) {
-                        console.error(`Token acquisition failed: ${popupError.message}`);
-                    }
+                    const popupResponse = await myMSALObj.acquireTokenPopup(accessTokenRequest);
+                    console.log("Access token acquired via popup");
+                    accessToken = popupResponse.accessToken;
+                } catch (popupError) {
+                    console.error(`Token acquisition failed: ${popupError.message}`);
+                }
             }
-            
+
             endpoint = `https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?$filter=userPrincipalName eq '${requesterEmail}'`;
         } finally {
             // Call Microsoft Graph
@@ -358,23 +450,58 @@ async function fetchRequesterDevices() {
         }
         // Display the results
         console.log(`Requester devices: ${(devicesData.value).length}`);
-        if ((devicesData.value).length > 2) {
+
+        if (devicesData.value.length === 0) {
+            // Show a warning when no devices are found
             Swal.fire({
-                toast: true,
-                position: 'top-start',
-                icon: 'warning',
-                title: 'Warning',
-                text: `Requester has ${(devicesData.value).length} devices, please investigate before resolving the ticket.`,
-                timer: null,
-                showConfirmButton: false
+                title: 'No Devices Found',
+                text: `No managed devices were found for ${requesterName}. This user may not have any enrolled devices or may be using unmanaged devices.`,
+                icon: 'info',
+                confirmButtonColor: '#0078d4',
+                confirmButtonText: 'OK'
             });
+        } else {
+            // Only show multiple devices warning if there are actually devices
+            if (devicesData.value.length > 2) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-start',
+                    icon: 'warning',
+                    title: 'Warning',
+                    text: `Requester has ${(devicesData.value).length} devices, please investigate before resolving the ticket.`,
+                    timer: null,
+                    showConfirmButton: false
+                });
+            }
+            // Only prompt to tattoo if there are devices to tattoo
+            tattooDevices(devicesData.value, requesterName);
         }
+
         displayDevices(devicesData.value, requesterName);
-        tattooDevices(devicesData.value, requesterName);
-        
+
     } catch (error) {
         console.error("Error fetching requester devices:", error);
-        showError(`Failed to fetch devices: ${error.message}`);
+
+        // Handle specific permission errors
+        if (error.message && (
+            error.message.includes('insufficient_scope') ||
+            error.message.includes('AADSTS65001') ||
+            error.message.includes('Forbidden') ||
+            error.message.includes('401')
+        )) {
+            Swal.fire({
+                title: 'Permission Denied',
+                text: 'You don\'t have the required permissions to access device information. Please contact your administrator to request the "DeviceManagementManagedDevices.Read.All" permission.',
+                icon: 'error',
+                confirmButtonColor: '#0078d4',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                // Disable the button after showing the permission error
+                disableFetchButton();
+            });
+        } else {
+            showError(`Failed to fetch devices: ${error.message}`);
+        }
     }
 }
 
@@ -391,8 +518,8 @@ function tattooDevices(devices, name) {
             cancelButtonColor: '#6c757d'
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const deviceLinks = devices.map(device => 
-                    `- [${device.deviceName || 'Unknown Device'}](https://intune.microsoft.com/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/${device.id})`
+                const deviceLinks = devices.map(device =>
+                    `-\u00A0[${device.deviceName || 'Unknown Device'}](https://intune.microsoft.com/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/${device.id})\n\u00A0\u00A0\u00A0├─ ${device.model || 'Unknown Model'}\n\u00A0\u00A0\u00A0└─ ${device.serialNumber || 'Unknown Serial Number'}`
                 ).join('\n');
 
                 let ticketData = await client.get('ticket');
@@ -400,7 +527,7 @@ function tattooDevices(devices, name) {
                 const noteData = {
                     ticket: {
                         comment: {
-                            body: `${name}'s Devices:\n${deviceLinks}`,
+                            body: `${name}'s Devices\n${deviceLinks}`,
                             public: false
                         }
                     }
@@ -438,14 +565,7 @@ function tattooDevices(devices, name) {
 function displayDevices(devices, requesterEmail) {
     const existingCards = document.querySelectorAll('.ms-Card');
     existingCards.forEach(card => card.remove());
-    
-    if (!devices || devices.length === 0) {
-        showStatus(`No devices found for ${requesterName}`);
-        return;
-    }
-    
-    showStatus(`Found ${devices.length} device(s) for ${requesterName}  `);
-    
+
     // Create a container for devices if it doesn't exist
     let devicesContainer = document.getElementById('devices-container');
     if (!devicesContainer) {
@@ -454,17 +574,46 @@ function displayDevices(devices, requesterEmail) {
         devicesContainer.style.marginTop = '20px';
         document.body.appendChild(devicesContainer);
     }
-    
+
     // Clear existing content
     devicesContainer.innerHTML = '';
-    
+
+    if (!devices || devices.length === 0) {
+        showStatus(`No devices found for ${requesterName}`);
+
+        // Add a visual warning card for no devices
+        const noDevicesCard = document.createElement('div');
+        noDevicesCard.className = 'ms-Card';
+        noDevicesCard.style = 'min-width: 325px; max-width: 500px; margin: 12px auto; background: #fff4e6; border: 1px solid #ffb900; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+
+        noDevicesCard.innerHTML = `
+            <div class="ms-Card-header" style="padding: 16px 20px 8px 20px; border-bottom: 1px solid #ffb900;">
+                <div style="font-size: 18px; font-weight: 600; color: #8a8000; margin-bottom: 4px; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">⚠️</span>
+                    No Devices Found
+                </div>
+            </div>
+            <div class="ms-Card-section" style="padding: 16px 20px;">
+                <div style="font-size: 14px; color: #8a8000; line-height: 1.4;">
+                    No managed devices were found for <strong>${requesterName}</strong>.<br>
+                    This user may not have any enrolled devices or may be using unmanaged devices.
+                </div>
+            </div>
+        `;
+
+        devicesContainer.appendChild(noDevicesCard);
+        return;
+    }
+
+    showStatus(`Found ${devices.length} device(s) for ${requesterName}  `);
+
     // Add a header
     const header = document.createElement('h3');
     header.textContent = `Devices for ${requesterEmail}:`;
     header.style.color = '#333';
     header.style.marginBottom = '15px';
     devicesContainer.appendChild(header);
-    
+
     // Render each device
     devices.forEach(device => {
         renderDeviceCard(device, devicesContainer);
@@ -512,9 +661,15 @@ function showError(error) {
         errorMessage = JSON.stringify(error);
     }
 
-    errorElement.textContent = `Error: ${errorMessage}`;
+    errorElement.textContent = `Error: ${errorMessage}. Try reloading the extension or force reloading the page (Ctrl+Shift+R).`;
     errorElement.classList.remove("hidden");
     console.error("MSAL Error:", error);
+
+    if (error.message.includes('AADSTS65001')) {
+        showError("Admin consent required. Please contact your IT administrator.");
+    } else if (error.message.includes('insufficient_scope')) {
+        showError("Missing required permissions. Please contact your IT administrator.");
+    }
 }
 
 function clearError() {
@@ -529,13 +684,13 @@ function renderDeviceCard(device, container = null) {
     const card = document.createElement('div');
     card.className = 'ms-Card';
     card.style = 'min-width: 325px; max-width: 500px; margin: 12px auto; background: #f8f9fa; border: 1px solid #e1e5e9; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
-    
+
     // Format last sync date if available
     let lastSyncDate = 'Never';
     if (device.lastSyncDateTime) {
         lastSyncDate = new Date(device.lastSyncDateTime).toLocaleString();
     }
-    
+
     // Determine compliance status color
     let complianceColor = '#605e5c';
     if (device.complianceState === 'compliant') {
@@ -543,7 +698,7 @@ function renderDeviceCard(device, container = null) {
     } else if (device.complianceState === 'noncompliant') {
         complianceColor = '#d13438';
     }
-    
+
     card.innerHTML = `
         <div class="ms-Card-header" style="padding: 16px 20px 8px 20px; border-bottom: 1px solid #e1e5e9; position: relative;">
           <div style="font-size: 18px; font-weight: 600; color: #323130; margin-bottom: 4px;">
@@ -586,7 +741,7 @@ function renderDeviceCard(device, container = null) {
           </div>
         </div>
       `;
-    
+
     if (container) {
         container.appendChild(card);
     } else {
@@ -599,11 +754,11 @@ async function showAccountSelectionPopup(accounts) {
     if (!accounts || accounts.length === 0) {
         return null;
     }
-    
+
     if (accounts.length === 1) {
         return accounts[0];
     }
-    
+
     // Create options for the dropdown
     const options = {};
     accounts.forEach((account, index) => {
@@ -611,7 +766,7 @@ async function showAccountSelectionPopup(accounts) {
         const email = account.username;
         options[index] = `${displayName} (${email})`;
     });
-    
+
     try {
         const { value: selectedIndex } = await Swal.fire({
             title: 'Select your account',
@@ -650,15 +805,15 @@ async function showAccountSelectionPopup(accounts) {
                 }
             }
         });
-        
+
         if (selectedIndex !== undefined) {
             const selectedAccount = accounts[parseInt(selectedIndex)];
             console.log('Account selected:', selectedAccount);
             return selectedAccount;
         }
-        
+
         return null;
-        
+
     } catch (error) {
         console.error('Error in account selection popup:', error);
         showError('Failed to show account selection dialog');

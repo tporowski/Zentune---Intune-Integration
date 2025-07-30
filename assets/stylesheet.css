@@ -117,3 +117,27 @@
 #fetch-requester-devices {
     margin-top: 20px;
 }
+
+/* Styles for disabled fetch button */
+#fetch-requester-devices:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    background-color: #f3f2f1 !important;
+    color: #a19f9d !important;
+    border-color: #d2d0ce !important;
+}
+
+#fetch-requester-devices:disabled:hover {
+    background-color: #f3f2f1 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    cursor:not-allowed !important;
+}
+
+/* Permission warning indicator */
+.permission-warning {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 12px;
+    opacity: 0.7;
+}
