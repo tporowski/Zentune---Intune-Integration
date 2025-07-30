@@ -2,10 +2,11 @@
   "name": "Zentune",
   "author": {
     "name": "Tommy Porowski",
-    "email": "tporowski17@gmail.com"
+    "email": "tporowski17@gmail.com",
+    "url": "https://tporowski17.github.io/tommyautomation"
   },
   "defaultLocale": "en",
-  "private": true,
+  "private": false,
   "location": {
     "support": {
       "ticket_sidebar": {

@@ -18,6 +18,7 @@ let appMetadata;
 let myMSALObj;
 let username = "";
 let agent = "";
+let tokenRefreshIntervalId = null;
 
 // Main initialization function
 async function initializeApp() {
@@ -50,8 +51,6 @@ async function initializeMSAL() {
         redirectUri = getRedirectUri();
     }
 
-    console.log(`Redirect URI: ${redirectUri}`);
-
     const msalConfig = {
         auth: {
             clientId: clientId,
@@ -74,7 +73,6 @@ async function initializeMSAL() {
         // Handle redirect promise
         const response = await myMSALObj.handleRedirectPromise();
         if (response) {
-            console.log("Redirect response:", response);
             handleResponse(response);
         } else {
             // Check if user is already logged in
@@ -99,8 +97,6 @@ function setupEventListeners() {
     const signInBtn = document.getElementById('sign-in-btn');
     const logoutBtn = document.getElementById('logout-btn');
     const fetchDevicesBtn = document.getElementById('fetch-requester-devices');
-    const swapAccounts = document.getElementById('swap-accounts');
-
     if (signInBtn) {
         signInBtn.addEventListener('click', signInPopup);
     }
@@ -113,9 +109,7 @@ function setupEventListeners() {
         fetchDevicesBtn.addEventListener('click', fetchRequesterDevices);
     }
 
-    if (swapAccounts) {
-        swapAccounts.addEventListener('click', displayAccounts);
-    }
+    // Removed swap accounts button and event listener
 
     window.addEventListener('unhandledrejection', ev => {
         console.error('Unhandled promise rejection', ev.reason);
@@ -161,32 +155,7 @@ async function selectAccount() {
     console.log("account selection completed")
 }
 
-async function displayAccounts() {
-    if (!myMSALObj) {
-        console.error("MSAL not initialized");
-        return;
-    }
 
-    const currentAccounts = myMSALObj.getAllAccounts();
-
-    if (currentAccounts.length === 0) {
-        Swal.fire({
-            title: 'No Accounts',
-            text: 'No accounts are currently signed in.',
-            icon: 'info',
-            confirmButtonColor: '#0078d4'
-        });
-        return;
-    }
-
-    const selectedAccount = await showAccountSelectionPopup(currentAccounts);
-
-    if (selectedAccount) {
-        username = selectedAccount.username;
-        updateUI("signed-in", selectedAccount);
-        showStatus(`Switched to account: ${selectedAccount.name || selectedAccount.username}`);
-    }
-}
 
 /**
  * Sign in using popup
@@ -261,11 +230,8 @@ async function updateUI(state, account = null) {
         // Welcome user by first name
         let agent;
         if (account.name) {
-            // Remove commas from the name first, then split
             let cleanName = account.name.replace(/,/g, "");
             let split_name = cleanName.split(' ');
-            
-            // Check if we have name parts and if the username contains the first name
             if (split_name.length > 0 && split_name[0]) {
                 if (!(account.username).includes(split_name[0].toLowerCase())) {
                     agent = split_name[0];
@@ -280,14 +246,20 @@ async function updateUI(state, account = null) {
         } else {
             agent = account.username;
         }
-        // let agent = account.name ? account.name.split(' ')[0] : account.username;
         if (title) title.textContent = `Welcome, ${agent}!`;
         if (errorElement) errorElement.classList.add("hidden");
         if (msalElement) msalElement.classList.add("hidden");
         if (logout) logout.classList.remove("hidden");
         if (fetchBtn) fetchBtn.classList.remove("hidden");
     } else {
+        // Reset the title to the default app name on sign out
+        if (title) title.textContent = "Intune Explorer";
         if (statusElement) statusElement.textContent = "Not signed in. Please sign in to continue.";
+        // Remove the device list if it exists
+        const devicesContainer = document.getElementById('devices-container');
+        if (devicesContainer) {
+            devicesContainer.remove();
+        }
         try {
             if (errorElement) errorElement.classList.add("hidden");
             if (msalElement) msalElement.classList.remove("hidden");
@@ -365,15 +337,11 @@ async function getAccessToken() {
 
     try {
         const response = await myMSALObj.acquireTokenSilent(accessTokenRequest);
-        console.log("Access token acquired silently");
         return response.accessToken;
     } catch (error) {
-        console.warn("Silent token acquisition failed, trying popup:", error);
-
         // If silent acquisition fails, try popup
         try {
             const popupResponse = await myMSALObj.acquireTokenPopup(accessTokenRequest);
-            console.log("Access token acquired via popup");
             return popupResponse.accessToken;
         } catch (popupError) {
             throw new Error(`Token acquisition failed: ${popupError.message}`);
@@ -382,13 +350,23 @@ async function getAccessToken() {
 }
 
 // Token expiry monitoring
-setInterval(async () => {
-    try {
-        await getAccessToken(); // This will refresh if needed
-    } catch (error) {
-        console.warn("Token refresh failed:", error);
-    }
-}, 30 * 60 * 1000); // Check every 30 minutes
+// Set up interval and clear it on app.willDestroy
+if (typeof ZAFClient !== 'undefined' && client && typeof client.on === 'function') {
+    tokenRefreshIntervalId = setInterval(async () => {
+        try {
+            await getAccessToken(); // This will refresh if needed
+        } catch (error) {
+            // Swallow error silently
+        }
+    }, 30 * 60 * 1000); // Check every 30 minutes
+
+    client.on('app.willDestroy', () => {
+        if (tokenRefreshIntervalId) {
+            clearInterval(tokenRefreshIntervalId);
+            tokenRefreshIntervalId = null;
+        }
+    });
+}
 
 // New function to fetch requester devices
 async function fetchRequesterDevices() {
@@ -411,13 +389,10 @@ async function fetchRequesterDevices() {
     let requesterEmail;
     try {
         try {
-            console.log("Fetching requester information...");
-
             // First, get the requester's email from Zendesk
             ticketData = await client.get('ticket');
             requesterEmail = ticketData.ticket.requester.email;
             requesterName = ticketData.ticket.requester.name;
-            console.log(`Requester email: ${requesterEmail}`);
 
             // Get access token
             let account = myMSALObj.getAccountByUsername(username);
@@ -428,13 +403,11 @@ async function fetchRequesterDevices() {
 
             try {
                 const response = await myMSALObj.acquireTokenSilent({ ...tokenRequest, account: account });
-                console.log("Access token acquired silently");
                 accessToken = response.accessToken;
             } catch (error) {
                 console.warn("Silent token acquisition failed, trying popup:", error);
                 try {
                     const popupResponse = await myMSALObj.acquireTokenPopup(accessTokenRequest);
-                    console.log("Access token acquired via popup");
                     accessToken = popupResponse.accessToken;
                 } catch (popupError) {
                     console.error(`Token acquisition failed: ${popupError.message}`);
@@ -808,7 +781,6 @@ async function showAccountSelectionPopup(accounts) {
 
         if (selectedIndex !== undefined) {
             const selectedAccount = accounts[parseInt(selectedIndex)];
-            console.log('Account selected:', selectedAccount);
             return selectedAccount;
         }
 
