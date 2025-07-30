@@ -1,5 +1,5 @@
 {
-  "name": "intune-explorer",
+  "name": "Zentune",
   "author": {
     "name": "Tommy Porowski",
     "email": "tporowski17@gmail.com"
@@ -20,10 +20,9 @@
     {
       "name": "zendesk_subdomain",
       "type": "text",
-      "label": "Auth Redirection Base URL",
-      "helpText": "The base of the redirect URI path for redirecting authentication. Found in url: https://{subdomain}.zendesk.com",
-      "required": true,
-      "default": "localhost"
+      "label": "Zendesk Subdomain",
+      "helpText": "Found in url: https://{subdomain}.zendesk.com",
+      "required": true
     },
     {
       "name": "azure_client_id",

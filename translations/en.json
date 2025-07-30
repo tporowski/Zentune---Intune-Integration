@@ -1,8 +1,8 @@
 {
   "app": {
-    "name": "Zen Tunes",
-    "short_description": "Play the famous zen tunes in your help desk.",
-    "long_description": "Play the famous zen tunes in your help desk and \n listen to the beats it has to offer.",
-    "installation_instructions": "Simply click install."
+    "name": "ZenTune",
+    "short_description": "Intune device integration for Zendesk support tickets.",
+    "long_description": "Seamlessly view Microsoft Intune device information for ticket requesters directly in your Zendesk sidebar. Get instant access to device compliance status, sync history, and direct links to Intune admin center.",
+    "installation_instructions": "1. Create an Azure app registration named 'ZenTune' and grant DeviceManagementManagedDevices.Read.All permission with admin consent. 2. Install this app and configure with your Azure Client ID, Tenant ID, and Zendesk subdomain. 3. Configure the redirect URI using browser dev tools and entering `getRedirectUri()` into the app's console. For detailed instructions, see: https://github.com/tporowski/Zentune---Intune-Integration/blob/main/README.md"
   }
 }
