@@ -76,16 +76,16 @@ Before setting up the application, ensure you have:
 4. **Go to the Console tab** at the bottom of the developer tools
 5. **Change the context** from "top" to "app_zentune" (or the exact name of your application) using the dropdown at the top of the console
 
-   ![Step 1: Find the "top" dropdown](assets/step1.png)
+   ![Step 1: Find the "top" dropdown](assets/Step1.png)
    
-   ![Step 2: Select "app_zentune" from dropdown](assets/step2.png)
+   ![Step 2: Select "app_zentune" from dropdown](assets/Step2.png)
 
 6. **Type the following command** and press Enter:
    ```javascript
    getRedirectUri()
    ```
    
-   ![Step 3: Enter getRedirectUri() command and copy the result](assets/step3.png)
+   ![Step 3: Enter getRedirectUri() command and copy the result](assets/Step3.png)
    
    *Note: The redirect URI shown in the example image above is a developer URI and won't match your production URI. Your actual URI will look different.*
 
